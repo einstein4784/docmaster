@@ -1,63 +1,71 @@
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template, send_file, flash, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
 from docx import Document
 from PyPDF2 import PdfReader
-from lxml import etree
+import mammoth
+import pdfplumber
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'  # Required for flash messages
+
+# Configuration
 UPLOAD_FOLDER = 'uploads'
 HTML_FOLDER = 'html_files'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(HTML_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# Routes
 @app.route('/')
 def index():
+    """Render the homepage with an upload form."""
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    """Handle file uploads and conversion."""
+    if 'file' not in request.files:
+        flash('No file part')
+        return redirect(url_for('index'))
+
     file = request.files['file']
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(url_for('index'))
+
     filename = secure_filename(file.filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
-    
-    # Convert file to HTML
+
+    # Determine the file type and convert
     html_path = os.path.join(HTML_FOLDER, f"{os.path.splitext(filename)[0]}.html")
-    if filename.endswith('.docx'):
-        convert_docx_to_html(file_path, html_path)
-    elif filename.endswith('.pdf'):
-        convert_pdf_to_html(file_path, html_path)
-    else:
-        return "Unsupported file format"
-    
+    try:
+        if filename.endswith('.docx'):
+            convert_docx_to_html(file_path, html_path)
+        elif filename.endswith('.pdf'):
+            convert_pdf_to_html(file_path, html_path)
+        else:
+            flash('Unsupported file format')
+            return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'Error processing file: {str(e)}')
+        return redirect(url_for('index'))
+
+    flash('File converted successfully!')
     return send_file(html_path, as_attachment=True)
 
-import mammoth
-
+# Conversion Functions
 def convert_docx_to_html(input_path, output_path):
-    with open(input_path, "rb") as docx_file:
+    """Convert a Word document to HTML using Mammoth."""
+    with open(input_path, 'rb') as docx_file:
         result = mammoth.convert_to_html(docx_file)
         html = result.value  # Extract HTML content
-    with open(output_path, "w") as f:
+    with open(output_path, 'w') as f:
         f.write(html)
 
-
-from pdf2image import convert_from_path
-import pytesseract
-from lxml import etree
-
-import pdfplumber
-from bs4 import BeautifulSoup
-
-def is_duplicate_line(line, seen_lines):
-    if line in seen_lines:
-        return True
-    seen_lines.add(line)
-    return False
-
 def convert_pdf_to_html(input_path, output_path):
+    """Convert a PDF to HTML using PDFPlumber."""
     html = """
     <html>
     <head>
@@ -71,7 +79,6 @@ def convert_pdf_to_html(input_path, output_path):
     </head>
     <body>
     """
-    seen_lines = set()  # Track lines to prevent duplicates
 
     with pdfplumber.open(input_path) as pdf:
         for page_number, page in enumerate(pdf.pages, start=1):
@@ -85,41 +92,22 @@ def convert_pdf_to_html(input_path, output_path):
                     html += "<tr>"
                     for cell in row:
                         cell = cell or ""
-                        
                         # Detect and replace checkbox placeholders
                         if "[ ]" in cell:
                             options = cell.split("[ ]")
                             cell = "".join(f"<label><input type='checkbox' class='checkbox'> {opt.strip()}</label>" for opt in options if opt.strip())
-                        
                         html += f"<td>{cell}</td>"
                     html += "</tr>"
                 html += "</table>"
 
-            # Extract raw text, filter duplicates and unwanted lines
+            # Extract raw text
             text = page.extract_text()
             if text:
-                filtered_lines = []
-                for line in text.split("\n"):
-                    # Skip duplicate lines
-                    if line in seen_lines:
-                        continue
-                    seen_lines.add(line)
-
-                    # Skip specific unwanted lines
-                    if "Disclaimer" in line or line.startswith("For Office Use Only"):
-                        continue
-
-                    # Append valid lines
-                    filtered_lines.append(line)
-
-                # Add filtered text to HTML
-                if filtered_lines:
-                    html += f"<pre>{'\n'.join(filtered_lines)}</pre>"
+                html += f"<pre>{text}</pre>"
 
     html += "</body></html>"
 
-    # Write the HTML output
-    with open(output_path, "w") as f:
+    with open(output_path, 'w') as f:
         f.write(html)
 
 if __name__ == '__main__':

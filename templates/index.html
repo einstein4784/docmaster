@@ -1,14 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document to HTML Converter</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <h1>Upload Your Document</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <button type="submit">Convert to HTML</button>
-    </form>
+    <div class="container">
+        <h1 class="text-center mt-5">Document to HTML Converter</h1>
+        <form action="/upload" method="POST" enctype="multipart/form-data" class="mt-4">
+            <div class="mb-3">
+                <label for="file" class="form-label">Upload Your Document</label>
+                <input type="file" id="file" name="file" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Convert</button>
+        </form>
+    </div>
 </body>
 </html>
+
