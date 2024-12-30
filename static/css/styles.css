@@ -19,3 +19,44 @@ h1 {
     font-size: 24px;
     text-align: center;
 }
+
+.checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1px solid black;
+    vertical-align: middle;
+}
+
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+td, th {
+    border: 1px solid black;
+    padding: 10px;
+    text-align: left;
+}
+
+.signature {
+    margin-top: 40px;
+    display: inline-block;
+    border-top: 1px solid black;
+    width: 200px;
+    text-align: center;
+}
+body {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #000;
+}
+h2 {
+    font-size: 18px;
+    font-weight: bold;
+}
+.section-title {
+    font-weight: bold;
+    font-size: 16px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
